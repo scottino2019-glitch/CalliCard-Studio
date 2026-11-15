@@ -142,6 +142,7 @@ export const CALLIGRAPHIC_PRESETS: CalligraphicPreset[] = [
     apply: (lang) => ({
       mainFont: lang === 'ko' ? 'Noto Sans KR' : 'Noto Sans SC',
       mainWeight: '700',
+      secondaryFont: 'Plus Jakarta Sans',
       inkEffect: 'clean',
       paperTexture: 'none',
       sealEnabled: false,
@@ -155,6 +156,7 @@ export const CALLIGRAPHIC_PRESETS: CalligraphicPreset[] = [
     apply: (lang) => ({
       mainFont: lang === 'ko' ? 'Nanum Brush Script' : 'Ma Shan Zheng',
       mainWeight: '400',
+      secondaryFont: 'Noto Serif SC',
       inkEffect: 'brush-bleed',
       paperTexture: 'hanji',
       sealEnabled: true,
@@ -169,6 +171,7 @@ export const CALLIGRAPHIC_PRESETS: CalligraphicPreset[] = [
     apply: (lang) => ({
       mainFont: lang === 'ko' ? 'Song Myung' : 'Noto Serif SC',
       mainWeight: lang === 'ko' ? '400' : '700',
+      secondaryFont: 'Noto Serif SC',
       inkEffect: 'soft-ink',
       paperTexture: 'editorial',
       sealEnabled: true,
@@ -183,6 +186,7 @@ export const CALLIGRAPHIC_PRESETS: CalligraphicPreset[] = [
     apply: (lang) => ({
       mainFont: lang === 'ko' ? 'Nanum Pen Script' : 'Zhi Mang Xing',
       mainWeight: '400',
+      secondaryFont: 'DM Sans',
       inkEffect: 'soft-ink',
       paperTexture: 'hanji',
       sealEnabled: false,

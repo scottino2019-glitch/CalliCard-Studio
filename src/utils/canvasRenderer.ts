@@ -30,64 +30,106 @@ export function getContrastColor(hex: string): string {
 
 function getPaperTile(texture: PaperTexture, isDarkBg: boolean): HTMLCanvasElement | null {
   if (texture === 'none') return null;
-  const key = `${texture}-${isDarkBg ? 'dark' : 'light'}`;
+  const key = `${texture}-v2-${isDarkBg ? 'dark' : 'light'}`;
   const cached = paperPatternCache.get(key);
   if (cached) return cached;
 
-  const size = 256;
+  const size = 320;
   const tile = document.createElement('canvas');
   tile.width = size;
   tile.height = size;
   const tctx = tile.getContext('2d');
   if (!tctx) return null;
 
-  const imgData = tctx.createImageData(size, size);
-  const data = imgData.data;
-
-  // Deterministic pseudo-random grain
+  // Deterministic pseudo-random generator
   let seed = texture === 'hanji' ? 1337 : 4242;
   const rand = () => {
     seed = (seed * 16807) % 2147483647;
     return (seed - 1) / 2147483646;
   };
 
-  for (let i = 0; i < data.length; i += 4) {
-    const n = rand();
-    if (texture === 'editorial') {
-      const val = isDarkBg ? 255 : 0;
-      data[i] = val;
-      data[i + 1] = val;
-      data[i + 2] = val;
-      data[i + 3] = n > 0.5 ? Math.floor((n - 0.5) * 18) : 0;
-    } else {
-      // Hanji subtle warm fiber tone
-      const val = isDarkBg ? 235 : 95;
-      data[i] = val;
-      data[i + 1] = isDarkBg ? 230 : 82;
-      data[i + 2] = isDarkBg ? 220 : 65;
-      data[i + 3] = n > 0.45 ? Math.floor((n - 0.45) * 20) : 0;
-    }
-  }
-  tctx.putImageData(imgData, 0, 0);
-
   if (texture === 'hanji') {
-    // Subtle organic mulberry paper fibers
-    tctx.strokeStyle = isDarkBg ? 'rgba(255,255,255,0.035)' : 'rgba(90,72,50,0.045)';
-    tctx.lineWidth = 0.8;
-    for (let f = 0; f < 42; f++) {
+    // Soft organic paper mottling clouds
+    for (let c = 0; c < 26; c++) {
+      const cx = rand() * size;
+      const cy = rand() * size;
+      const radius = 24 + rand() * 52;
+      const grad = tctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+      const col = isDarkBg ? '245, 236, 216' : '118, 92, 58';
+      grad.addColorStop(0, `rgba(${col}, ${isDarkBg ? 0.055 : 0.07})`);
+      grad.addColorStop(1, `rgba(${col}, 0)`);
+      tctx.fillStyle = grad;
+      tctx.fillRect(0, 0, size, size);
+    }
+
+    // Tactile 2x2 paper tooth speckles (stays crisp even when preview is scaled down)
+    for (let y = 0; y < size; y += 2) {
+      for (let x = 0; x < size; x += 2) {
+        const n = rand();
+        if (n > 0.62) {
+          const alpha = ((n - 0.62) / 0.38) * (isDarkBg ? 0.08 : 0.11);
+          tctx.fillStyle = isDarkBg
+            ? `rgba(242, 234, 218, ${alpha.toFixed(3)})`
+            : `rgba(88, 68, 42, ${alpha.toFixed(3)})`;
+          tctx.fillRect(x, y, 2, 2);
+        }
+      }
+    }
+
+    // Authentic mulberry paper (Hanji / Xuan) fibers
+    for (let f = 0; f < 95; f++) {
       const x = rand() * size;
       const y = rand() * size;
-      const len = 8 + rand() * 22;
+      const len = 14 + rand() * 38;
       const angle = rand() * Math.PI * 2;
+      const bend = (rand() - 0.5) * 14;
+      const alpha = (isDarkBg ? 0.09 : 0.11) + rand() * 0.12;
+      tctx.strokeStyle = isDarkBg
+        ? `rgba(245, 238, 220, ${alpha.toFixed(3)})`
+        : `rgba(104, 78, 46, ${alpha.toFixed(3)})`;
+      tctx.lineWidth = 1.0 + rand() * 1.1;
+      tctx.lineCap = 'round';
       tctx.beginPath();
       tctx.moveTo(x, y);
       tctx.quadraticCurveTo(
-        x + Math.cos(angle + 0.4) * (len * 0.5),
-        y + Math.sin(angle + 0.4) * (len * 0.5),
+        x + Math.cos(angle + 0.45) * (len * 0.5) + bend,
+        y + Math.sin(angle + 0.45) * (len * 0.5) - bend,
         x + Math.cos(angle) * len,
         y + Math.sin(angle) * len
       );
       tctx.stroke();
+    }
+  } else {
+    // Editorial archival cotton-press paper: laid horizontal ribs + fine press grain
+    const ribColor = isDarkBg ? '226, 232, 240' : '30, 41, 59';
+    tctx.strokeStyle = `rgba(${ribColor}, ${isDarkBg ? 0.05 : 0.055})`;
+    tctx.lineWidth = 1.2;
+    for (let y = 0; y < size; y += 8) {
+      tctx.beginPath();
+      tctx.moveTo(0, y + 0.5);
+      tctx.lineTo(size, y + 0.5);
+      tctx.stroke();
+    }
+
+    // Subtle vertical chain lines
+    tctx.strokeStyle = `rgba(${ribColor}, ${isDarkBg ? 0.035 : 0.04})`;
+    for (let x = 0; x < size; x += 64) {
+      tctx.beginPath();
+      tctx.moveTo(x + 0.5, 0);
+      tctx.lineTo(x + 0.5, size);
+      tctx.stroke();
+    }
+
+    // Fine 2x2 archival grain speckles
+    for (let y = 0; y < size; y += 2) {
+      for (let x = 0; x < size; x += 2) {
+        const n = rand();
+        if (n > 0.55) {
+          const alpha = ((n - 0.55) / 0.45) * (isDarkBg ? 0.095 : 0.12);
+          tctx.fillStyle = `rgba(${ribColor}, ${alpha.toFixed(3)})`;
+          tctx.fillRect(x, y, 2, 2);
+        }
+      }
     }
   }
 
@@ -131,38 +173,67 @@ function setCanvasFont(
   }
 }
 
-function applyInkShadow(
-  ctx: CanvasRenderingContext2D,
-  effect: CardProject['typography']['inkEffect'],
-  inkColor: string,
-  unitScale: number
-) {
-  if (effect === 'clean') {
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
-    return;
-  }
-  const { r, g, b } = hexToRgb(inkColor);
-  if (effect === 'soft-ink') {
-    ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.16)`;
-    ctx.shadowBlur = 4 * unitScale;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 2 * unitScale;
-  } else {
-    ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.28)`;
-    ctx.shadowBlur = 11 * unitScale;
-    ctx.shadowOffsetX = 1.5 * unitScale;
-    ctx.shadowOffsetY = 3 * unitScale;
-  }
-}
-
 function clearInkShadow(ctx: CanvasRenderingContext2D) {
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 0;
+}
+
+function drawCalligraphicText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  effect: CardProject['typography']['inkEffect'],
+  inkColor: string,
+  unit: number,
+  fontSizePx: number
+) {
+  if (effect === 'clean') {
+    clearInkShadow(ctx);
+    ctx.fillStyle = inkColor;
+    ctx.fillText(text, x, y);
+    return;
+  }
+
+  const { r, g, b } = hexToRgb(inkColor);
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  if (effect === 'soft-ink') {
+    // Soft sumi ink cushion & gentle absorption into paper
+    ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.36)`;
+    ctx.shadowBlur = 11 * unit;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2 * unit;
+    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.24)`;
+    ctx.lineWidth = Math.max(1.5, fontSizePx * 0.028);
+    ctx.strokeText(text, x, y);
+
+    clearInkShadow(ctx);
+    ctx.fillStyle = inkColor;
+    ctx.fillText(text, x, y);
+  } else {
+    // Expressive wet-brush bleed: wide ink aura + feathered bleed edge + directional brush echo
+    ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 0.55)`;
+    ctx.shadowBlur = 22 * unit;
+    ctx.shadowOffsetX = 2.5 * unit;
+    ctx.shadowOffsetY = 3.5 * unit;
+    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.42)`;
+    ctx.lineWidth = Math.max(2.5, fontSizePx * 0.058);
+    ctx.strokeText(text, x, y);
+
+    clearInkShadow(ctx);
+    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.26)`;
+    ctx.fillText(text, x + 2.0 * unit, y + 1.4 * unit);
+
+    ctx.fillStyle = inkColor;
+    ctx.fillText(text, x, y);
+  }
+
+  ctx.restore();
 }
 
 // Wraps both Latin/Korean space-separated words AND continuous Chinese/CJK strings cleanly
@@ -325,8 +396,9 @@ export async function ensureProjectFontsLoaded(project: CardProject): Promise<vo
   const combinedSample = Array.from(new Set(texts.join(''))).join('') || '가나다漢字ABC';
   const fontsToLoad = [
     `${project.typography.mainWeight} 64px "${project.typography.mainFont}"`,
+    `400 64px "${project.typography.mainFont}"`,
     `700 64px "${project.typography.mainFont}"`,
-    `400 32px "${project.typography.secondaryFont}"`,
+    `500 32px "${project.typography.secondaryFont}"`,
     `700 32px "${project.typography.secondaryFont}"`,
   ];
 
@@ -362,7 +434,7 @@ export function renderCardToCanvas(
   ctx.fillStyle = project.colors.background;
   ctx.fillRect(0, 0, W, H);
 
-  // 2. Subtle Paper Texture
+  // 2. Paper Texture + Tactile Edge Vignette
   const { r, g, b } = hexToRgb(project.colors.background);
   const isDarkBg = (0.299 * r + 0.587 * g + 0.114 * b) / 255 < 0.45;
   const paperTile = getPaperTile(project.typography.paperTexture, isDarkBg);
@@ -372,6 +444,21 @@ export function renderCardToCanvas(
       ctx.fillStyle = pattern;
       ctx.fillRect(0, 0, W, H);
     }
+    const edgeVig = ctx.createRadialGradient(
+      W / 2,
+      H / 2,
+      Math.min(W, H) * 0.25,
+      W / 2,
+      H / 2,
+      Math.hypot(W, H) * 0.55
+    );
+    edgeVig.addColorStop(0, 'rgba(0,0,0,0)');
+    edgeVig.addColorStop(
+      1,
+      isDarkBg ? 'rgba(255,255,255,0.04)' : 'rgba(62,45,25,0.065)'
+    );
+    ctx.fillStyle = edgeVig;
+    ctx.fillRect(0, 0, W, H);
   }
 
   // 3. Render Template
@@ -440,10 +527,16 @@ function renderWordTemplate(
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  ctx.fillStyle = colors.primaryText;
-  applyInkShadow(ctx, typography.inkEffect, colors.primaryText, unit);
-  ctx.fillText(wordText, padX, curY);
-  clearInkShadow(ctx);
+  drawCalligraphicText(
+    ctx,
+    wordText,
+    padX,
+    curY,
+    typography.inkEffect,
+    colors.primaryText,
+    unit,
+    mainSize
+  );
 
   curY += Math.round(mainSize * 1.12);
 
@@ -455,7 +548,7 @@ function renderWordTemplate(
     const pronLines = wrapText(ctx, word.pronunciation, maxWidth);
     for (const line of pronLines) {
       ctx.fillText(line, padX, curY);
-      curY += Math.round(pronSize * 1.24);
+      curY += Math.round(pronSize * typography.lineHeight);
     }
     curY += Math.round(10 * unit);
   }
@@ -468,7 +561,7 @@ function renderWordTemplate(
     const meanLines = wrapText(ctx, word.meaning, maxWidth);
     for (const line of meanLines) {
       ctx.fillText(line, padX, curY);
-      curY += Math.round(meanSize * 1.3);
+      curY += Math.round(meanSize * typography.lineHeight);
     }
   }
 
@@ -479,7 +572,9 @@ function renderWordTemplate(
     const termSize = Math.round(44 * unit * typography.secondaryScale);
     const exMeanSize = Math.round(38 * unit * typography.secondaryScale);
     const itemGap = Math.round(22 * unit);
-    const blockPerItem = Math.round(termSize * 1.22 + exMeanSize * 1.25 + itemGap);
+    const blockPerItem = Math.round(
+      termSize * typography.lineHeight + exMeanSize * typography.lineHeight + itemGap
+    );
     const totalExamplesH = validExamples.length * blockPerItem;
 
     const minDividerY = curY + Math.round(28 * unit);
@@ -499,11 +594,19 @@ function renderWordTemplate(
     for (const ex of validExamples) {
       if (ex.term.trim()) {
         setCanvasFont(ctx, '700', termSize, typography.mainFont, 0);
-        ctx.fillStyle = colors.primaryText;
         const termLines = wrapText(ctx, ex.term, maxWidth);
         for (const tl of termLines) {
-          ctx.fillText(tl, padX, exY);
-          exY += Math.round(termSize * 1.22);
+          drawCalligraphicText(
+            ctx,
+            tl,
+            padX,
+            exY,
+            typography.inkEffect,
+            colors.primaryText,
+            unit,
+            termSize
+          );
+          exY += Math.round(termSize * typography.lineHeight);
         }
       }
       if (ex.meaning.trim()) {
@@ -512,7 +615,7 @@ function renderWordTemplate(
         const lines = wrapText(ctx, ex.meaning, maxWidth);
         for (const l of lines) {
           ctx.fillText(l, padX, exY);
-          exY += Math.round(exMeanSize * 1.24);
+          exY += Math.round(exMeanSize * typography.lineHeight);
         }
       }
       exY += Math.round(itemGap * 0.8);
@@ -561,18 +664,23 @@ function renderMinimalTemplate(
 
     const startY = (H - (totalWordH + subH)) / 2 + (charSize * charStep) / 2;
 
-    ctx.fillStyle = colors.primaryText;
-    applyInkShadow(ctx, typography.inkEffect, colors.primaryText, unit);
-
     // Draw right-to-left columns for authentic East Asian typography
     cols.forEach((colStr, colIdx) => {
       const colX = centerX + totalColsW / 2 - colIdx * colSpacing;
       const chars = Array.from(colStr.trim());
       chars.forEach((ch, rowIdx) => {
-        ctx.fillText(ch, colX, startY + rowIdx * charSize * charStep);
+        drawCalligraphicText(
+          ctx,
+          ch,
+          colX,
+          startY + rowIdx * charSize * charStep,
+          typography.inkEffect,
+          colors.primaryText,
+          unit,
+          charSize
+        );
       });
     });
-    clearInkShadow(ctx);
 
     let subY = startY + (maxCharsInCol - 0.5) * charSize * charStep + Math.round(42 * unit);
     if (hasPron) {
@@ -615,13 +723,19 @@ function renderMinimalTemplate(
   const totalH = wordBlockH + gapWordPron + pronBlockH + gapPronMean + meanBlockH;
   let curY = (H - totalH) / 2 + wordLineH / 2;
 
-  ctx.fillStyle = colors.primaryText;
-  applyInkShadow(ctx, typography.inkEffect, colors.primaryText, unit);
   for (const l of rawLines) {
-    ctx.fillText(l, centerX, curY);
+    drawCalligraphicText(
+      ctx,
+      l,
+      centerX,
+      curY,
+      typography.inkEffect,
+      colors.primaryText,
+      unit,
+      mainSize
+    );
     curY += wordLineH;
   }
-  clearInkShadow(ctx);
 
   if (hasPron) {
     curY = curY - wordLineH / 2 + gapWordPron + pronBlockH / 2;
@@ -720,16 +834,22 @@ function renderDialogueTemplate(
     const textColor =
       m.bubble.style === 'filled' ? getContrastColor(colors.accent) : colors.primaryText;
     setCanvasFont(ctx, typography.mainWeight, bubbleFontSize, typography.mainFont, typography.letterSpacing);
-    ctx.fillStyle = textColor;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    applyInkShadow(ctx, typography.inkEffect, textColor, unit);
 
     const textStartY = curY + (m.h - m.lines.length * lineH) / 2 + lineH / 2;
     m.lines.forEach((line, idx) => {
-      ctx.fillText(line, x + padBubbleX, textStartY + idx * lineH);
+      drawCalligraphicText(
+        ctx,
+        line,
+        x + padBubbleX,
+        textStartY + idx * lineH,
+        typography.inkEffect,
+        textColor,
+        unit,
+        bubbleFontSize
+      );
     });
-    clearInkShadow(ctx);
     ctx.restore();
 
     // Optional romanization / pinyin / translation subtext below bubble
@@ -797,42 +917,60 @@ function renderQuizTemplate(
     ctx.restore();
   }
 
-  // Question text
+  // Quiz Option Grid dimensions calculated first so question lineHeight never collides
+  const opts = quiz.options;
+  const bottomMargin = Math.round(H * 0.08);
+  const availW = W - padX * 2;
+  const isPortrait = W < H;
+  const cols = isPortrait ? 1 : opts.length <= 3 ? Math.max(opts.length, 1) : 2;
+  const rows = Math.max(1, Math.ceil(opts.length / cols));
+
+  const gapX = Math.round(26 * unit);
+  const gapY = Math.round(22 * unit * (typography.lineHeight / 1.25));
+  const cardH = Math.round((isPortrait ? 128 : 150) * unit);
+  const cardW = Math.round((availW - gapX * (cols - 1)) / cols);
+  const totalGridH = opts.length > 0 ? rows * cardH + (rows - 1) * gapY : 0;
+
+  // Question text respecting typography.lineHeight and fitting safely above options
   const qMaxW = quiz.showWatermark ? W * 0.66 : W - padX * 2;
+  const availQuestionH =
+    opts.length > 0
+      ? Math.max(120 * unit, H - bottomMargin - totalGridH - Math.round(36 * unit) - curY)
+      : H - bottomMargin - curY;
+
   let qSize = Math.round(92 * unit * typography.secondaryScale);
   setCanvasFont(ctx, '700', qSize, typography.secondaryFont, -0.01);
   let qLines = wrapText(ctx, quiz.question || ' ', qMaxW);
-  while (qLines.length > 4 && qSize > 44 * unit) {
-    qSize = Math.round(qSize * 0.9);
+  while (
+    (qLines.length > 4 || qLines.length * qSize * typography.lineHeight > availQuestionH) &&
+    qSize > 38 * unit
+  ) {
+    qSize = Math.round(qSize * 0.92);
     setCanvasFont(ctx, '700', qSize, typography.secondaryFont, -0.01);
     qLines = wrapText(ctx, quiz.question || ' ', qMaxW);
   }
 
-  ctx.fillStyle = colors.primaryText;
+  const qLineH = Math.round(qSize * typography.lineHeight);
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   let qY = curY;
   for (const line of qLines) {
-    ctx.fillText(line, padX, qY);
-    qY += Math.round(qSize * 1.18);
+    drawCalligraphicText(
+      ctx,
+      line,
+      padX,
+      qY,
+      typography.inkEffect,
+      colors.primaryText,
+      unit,
+      qSize
+    );
+    qY += qLineH;
   }
 
-  // Quiz Option Cards Row / Grid
-  const opts = quiz.options;
   if (opts.length === 0) return;
 
-  const bottomMargin = Math.round(H * 0.08);
-  const availW = W - padX * 2;
-  const isPortrait = W < H;
-  const cols = isPortrait ? 1 : opts.length <= 3 ? opts.length : 2;
-  const rows = Math.ceil(opts.length / cols);
-
-  const gapX = Math.round(26 * unit);
-  const gapY = Math.round(22 * unit);
-  const cardH = Math.round((isPortrait ? 128 : 150) * unit);
-  const cardW = Math.round((availW - gapX * (cols - 1)) / cols);
-  const totalGridH = rows * cardH + (rows - 1) * gapY;
-  const startGridY = Math.max(qY + Math.round(38 * unit), H - bottomMargin - totalGridH);
+  const startGridY = Math.max(qY + Math.round(28 * unit), H - bottomMargin - totalGridH);
 
   opts.forEach((opt, idx) => {
     const colIdx = idx % cols;
@@ -867,23 +1005,40 @@ function renderQuizTemplate(
     ctx.textBaseline = 'middle';
     ctx.fillText(opt.label, badgeCx, badgeCy + 1 * unit);
 
-    // Option text in target CJK font
+    // Option text in target CJK font (wraps cleanly if long and respects lineHeight)
     const optTextX = badgeCx + badgeR + Math.round(20 * unit);
     const optMaxW = ox + cardW - optTextX - Math.round(20 * unit);
     let optSize = Math.round(46 * unit * typography.mainScale);
     setCanvasFont(ctx, typography.mainWeight, optSize, typography.mainFont, typography.letterSpacing);
-    while (ctx.measureText(opt.text || ' ').width > optMaxW && optSize > 24 * unit) {
+    let optLines = wrapText(ctx, opt.text || ' ', optMaxW);
+    while (
+      (optLines.length > 2 ||
+        optLines.some((l) => ctx.measureText(l).width > optMaxW)) &&
+      optSize > 24 * unit
+    ) {
       optSize = Math.round(optSize * 0.9);
       setCanvasFont(ctx, typography.mainWeight, optSize, typography.mainFont, typography.letterSpacing);
+      optLines = wrapText(ctx, opt.text || ' ', optMaxW);
     }
 
     const optTextColor = isHighlighted ? getContrastColor(colors.accent) : colors.primaryText;
-    ctx.fillStyle = optTextColor;
+    const optLineH = Math.round(optSize * Math.min(typography.lineHeight, 1.45));
+    const optStartY = badgeCy - ((optLines.length - 1) * optLineH) / 2 + 1 * unit;
+
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    applyInkShadow(ctx, typography.inkEffect, optTextColor, unit);
-    ctx.fillText(opt.text, optTextX, badgeCy + 1 * unit);
-    clearInkShadow(ctx);
+    optLines.forEach((ol, lineIdx) => {
+      drawCalligraphicText(
+        ctx,
+        ol,
+        optTextX,
+        optStartY + lineIdx * optLineH,
+        typography.inkEffect,
+        optTextColor,
+        unit,
+        optSize
+      );
+    });
 
     ctx.restore();
   });

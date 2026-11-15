@@ -146,16 +146,25 @@ export function InspectorPanel({
                 Esempi Pronti ({project.language === 'ko' ? 'Coreano' : 'Cinese'})
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {matchingPresets.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => onApplyPreset(preset)}
-                    className="text-left px-3 py-2 text-[13px] font-bold text-[#0B1320] bg-[#F4F7FB] hover:bg-[#E5ECF5] border border-[#5A6D84] hover:border-[#1E2B3C] rounded-lg shadow-xs transition-colors truncate cursor-pointer"
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+                {matchingPresets.map((preset) => {
+                  const isActive =
+                    project.template === preset.template &&
+                    project.name === preset.patch.name;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => onApplyPreset(preset)}
+                      className={`text-left px-3 py-2 text-[13px] font-bold rounded-lg border shadow-xs transition-colors truncate cursor-pointer ${
+                        isActive
+                          ? 'border-[#1E2B3C] bg-[#1E2B3C] text-[#FFFFFF]'
+                          : 'text-[#0B1320] bg-[#F4F7FB] hover:bg-[#E5ECF5] border-[#5A6D84] hover:border-[#1E2B3C]'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -939,21 +948,35 @@ export function InspectorPanel({
                 Stili Calligrafici Rapidi
               </label>
               <div className="grid grid-cols-2 gap-2.5">
-                {CALLIGRAPHIC_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => updateTypography(preset.apply(project.language))}
-                    className="text-left p-3 rounded-lg bg-[#F4F7FB] border border-[#5A6D84] hover:border-[#1E2B3C] hover:bg-[#E5ECF5] shadow-xs transition-colors cursor-pointer"
-                  >
-                    <div className="text-sm font-bold text-[#0B1320]">
-                      {preset.name}
-                    </div>
-                    <div className="text-[13px] font-medium text-[#273549] mt-1 leading-snug">
-                      {preset.description}
-                    </div>
-                  </button>
-                ))}
+                {CALLIGRAPHIC_PRESETS.map((preset) => {
+                  const spec = preset.apply(project.language);
+                  const isActive =
+                    project.typography.mainFont === spec.mainFont &&
+                    project.typography.inkEffect === spec.inkEffect &&
+                    project.typography.paperTexture === spec.paperTexture &&
+                    project.typography.sealEnabled === spec.sealEnabled;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => updateTypography(spec)}
+                      className={`text-left p-3 rounded-lg border shadow-xs transition-colors cursor-pointer ${
+                        isActive
+                          ? 'bg-[#1E2B3C] border-[#1E2B3C] text-[#FFFFFF]'
+                          : 'bg-[#F4F7FB] border-[#5A6D84] hover:border-[#1E2B3C] hover:bg-[#E5ECF5] text-[#0B1320]'
+                      }`}
+                    >
+                      <div className="text-sm font-bold">{preset.name}</div>
+                      <div
+                        className={`text-[13px] font-medium mt-1 leading-snug ${
+                          isActive ? 'text-[#CBD5E1]' : 'text-[#273549]'
+                        }`}
+                      >
+                        {preset.description}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
